@@ -1,0 +1,102 @@
+{
+    "name": "Sun",
+    "radius": 695500,
+    "rotationPeriod": 1,
+    "distanceFromParent": 0,
+    "yearLength": 0,
+    "texture": "textures/sun-map.jpg",
+    "children": [
+        {
+            "name": "Mercury",
+            "radius": 2439.5,
+            "rotationPeriod": 58.65,
+            "distanceFromParent": 57900000,
+            "yearLength": 88,
+            "texture": "textures/MERCURY-map.jpg",
+            "children": []
+        },
+        {
+            "name": "Venus",
+            "radius": 6052,
+            "rotationPeriod": -243.02083333333334,
+            "distanceFromParent": 108200000,
+            "yearLength": 224.7,
+            "texture": "textures/VENUS-map.jpg",
+            "children": []
+        },
+        {
+            "name": "Earth",
+            "radius": 6378,
+            "rotationPeriod": 0.9958333333333332,
+            "distanceFromParent": 149600000,
+            "yearLength": 365.2,
+            "texture": "textures/EARTH-map.jpg",
+            "children": [
+                {
+                    "name": "Moon",
+                    "radius": 1737.5,
+                    "rotationPeriod": 27.320833333333336,
+                    "distanceFromParent": 384000,
+                    "yearLength": 27.3,
+                    "texture": "textures/MOON-map.jpg",
+                    "children": []
+                }
+            ]
+        },    
+        {
+            "name": "Mars",
+            "radius": 3396,
+            "rotationPeriod": 1.0250000000000001,
+            "distanceFromParent": 227900000,
+            "yearLength": 687,
+            "texture": "textures/MARS-map.jpg",
+            "children": []
+        },
+        {
+            "name": "Jupiter",
+            "radius": 71492,
+            "rotationPeriod": 0.41250000000000003,
+            "distanceFromParent": 778600000,
+            "yearLength": 4331,
+            "texture": "textures/JUPITER-map.jpg",
+            "children": []
+        },
+        {
+            "name": "Saturn",
+            "radius": 60268,
+            "rotationPeriod": 0.4458333333333333,
+            "distanceFromParent": 1433500000,
+            "yearLength": 10747,
+            "texture": "textures/SATURN-map.jpg",
+            "children": []
+        },
+        {
+            "name": "Uranus",
+            "radius": 25559,
+            "rotationPeriod": -0.7166666666666667,
+            "distanceFromParent": 2872500000,
+            "yearLength": 30589,
+            "texture": "textures/URANUS-map.jpg",
+            "children": []
+        },
+        {
+            "name": "Neptune",
+            "radius": 24764,
+            "rotationPeriod": 0.6708333333333334,
+            "distanceFromParent": 4495100000,
+            "yearLength": 59800,
+            "texture": "textures/NEPTUNE-map.jpg",
+            "children": []
+        },
+        {
+            "name": "Pluto",
+            "radius": 1185,
+            "rotationPeriod": -6.3875,
+            "distanceFromParent": 5906400000,
+            "yearLength": 90560,
+            "texture": "textures/PLUTO-map.jpg",
+            "children": []
+        }
+    ]
+}
+
