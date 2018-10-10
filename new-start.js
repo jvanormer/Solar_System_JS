@@ -80,8 +80,16 @@ function generatePlanets(){
         ]
     }   
     recursePlanets(temp); 
+}
 
-
+//Makes a planet based on its details and returns the mesh
+function makePlanet(details){
+    var sphere = new THREE.SphereGeometry(1, 32, 32);    
+    var planetTexture = THREE.ImageUtils.loadTexture(details.texture);
+    var planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
+    planet = new THREE.Mesh(sphere, planetMaterial);
+    details.mesh = planet;
+    return planet;
 }
 
 function init(){
@@ -109,58 +117,48 @@ function init(){
     renderer.setClearColor(0x000000, 0);
     camera.position.z = 25;
     document.body.appendChild(renderer.domElement);
-
     controls = new THREE.OrbitControls(camera);
 
+    //Planetary ring, not useful right now
+    var ringGeometry = new THREE.RingGeometry(1, 1.01, 64, 64);
+    ringGeometry.rotateX(Math.PI / 2); //Put it on the same plane
+    var ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+    var ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.scale.set(5, 5, 5);
 
-    var sphere = new THREE.SphereGeometry(1, 32, 32);    
+    //Make bodies
+    moon = makePlanet({texture: "textures/moon-map.jpg"});
+    earth = makePlanet({texture: "textures/earth-map.jpg"});
+    sun = makePlanet({texture: "textures/sun-map.jpg"});
 
-    //Planetary ring
-    //var ringGeometry = new THREE.RingGeometry(1, 1.01, 64, 64);
-    //ringGeometry.rotateX(Math.PI / 2); //Put it on the same plane
-    //var ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-
-    
-    var moonTexture = THREE.ImageUtils.loadTexture("textures/moon-map.jpg");
-    var moonMaterial = new THREE.MeshBasicMaterial({ map: moonTexture });
-    moon = new THREE.Mesh(sphere, moonMaterial);    
-    
-    
-    var earthTexture = THREE.ImageUtils.loadTexture("textures/earth-map.jpg");
-    var earthMaterial = new THREE.MeshBasicMaterial({ map: earthTexture });
-    earth = new THREE.Mesh(sphere, earthMaterial);        
-    
-
-    var sunTexture = THREE.ImageUtils.loadTexture("textures/sun-map.jpg");
-    var sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
-    sun = new THREE.Mesh(sphere, sunMaterial);  
-    
+    //Dummy group defining earth-moon system
     earthPivot = new THREE.Group();
     earthPivot.add(earth, moon);
 
+    //Dummy group defining sun-planet system
     sunPivot = new THREE.Group();
     sunPivot.add(earthPivot);    
-    sunPivot.add(sun);
+    sunPivot.add(sun, ring);
     
+    //Move earth-moon system away from center (sun)
     earthPivot.translateX(8);
 
+    //Move moon away from center of earth-moon system (earth)
     moon.translateX(3);
       
+    //Put the Solar System in the scene
     scene.add(sunPivot);
-    
-
-
 }
 
-
+//What to do every frame
 function animate() {
-    
     date = Date.now() * .01;
 
     sun.rotateY(1);
 
+    //cos(date * rate) * distance, 0, sin(date * rate) * distance
     earthPivot.position.set(Math.cos(date * .01) * 5, 0, Math.sin(date * .01) * 5)
-    //earth.
+
     earth.rotateY(1)
     
     moon.position.set(Math.cos(date) * 3, 0, Math.sin(date) * 3)
