@@ -1,0 +1,16 @@
+NOTES FROM RICKS
+
+Work *down* in code, right to left in math (vector times matrices)
+3. rotate about earth as pivot
+2. translate away from earth
+1. moon rotate/scale about moons pivot
+
+EXAMPLE:
+5. Rotate earth about moon
+4. Tranlsate moon and earth same distance away (from sun/origin)
+3. Rotate earth (not moving yet)
+2. Rotate moon about origin
+1. Move moon 5 units away from earth (translate from origin)
+
+Other notes:
+mesh.scale.set(1, 1, 1);

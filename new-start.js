@@ -1,85 +1,51 @@
-/*
-NOTES FROM RICKS
+const SIZESCALE = 0.0001;
+const DISTANCESCALE = 0.000001;
 
-Work *down* in code, right to left in math (vector times matrices)
-3. rotate about earth as pivot
-2. translate away from earth
-1. moon rotate/scale about moons pivot
+var scene, camera, renderer, earth, moon, earthMoonGroup, speedMultiplier, controls, objects, currind, earthPivots, planets, groups;
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
 
-EXAMPLE:
-5. Rotate earth about moon
-4. Tranlsate moon and earth same distance away (from sun/origin)
-3. Rotate earth (not moving yet)
-2. Rotate moon about origin
-1. Move moon 5 units away from earth (translate from origin)
-
-Other notes:
-mesh.scale.set(1, 1, 1);
-
-*/
-
-var scene, camera, renderer, earth, moon, earthMoonGroup, speedMultiplier, controls, objects, currind, earthPivots, planets;
-
-function recursePlanets(planet){    
-    var pivotGroup;
-    var sphere = new THREE.SphereGeometry(1, 32, 32);   
-    var texture = THREE.ImageUtils.loadTexture(planet.texture);
-    var material = new THREE.MeshBasicMaterial({ map: texture });
-    planetMesh = new THREE.Mesh(sphere, material);    
+function recursePlanets(details){              
+    //The sun is too damn big  
+    if (details.name == "Sun"){
+        details.radius /= 4;
+    }    
     
-    if (planet.children.length > 0){
-        pivotGroup = new THREE.Group();
+    //Make subsystem for body
+    var pivotGroup = pivotGroup = new THREE.Group();
+    //Make body
+    var mesh = makePlanet(details);    
+    //Add body to it's own subsystem
+    pivotGroup.add(mesh);    
+
+    if (details.type == "planet" || details.type == "star"){
+        planets.push(mesh);
     }
 
-    console.log(planet);
-    for (var i = 0; i < planet.children.length; i++){
-        planet.children[i].parent = planet;
-        recursePlanets(planet.children[i]);
-    }
-    
-    return;
-}
+    //Assign the group in the object itself for accessibility
+    details.group = pivotGroup;
 
-function generatePlanets(){
-    var temp = {
-        name: "Sun",
-        radius: 3,
-        rotationPeriod: 1,
-        distanceFromParent: 0,
-        yearLength: 0,
-        texture: "textures/sun-map.jpg",
-        children: [
-            {
-                name: "Earth",
-                radius: 2,
-                rotationPeriod: .05,
-                distanceFromParent: 5,
-                yearLength: 365.2,
-                texture: "textures/EARTH-map.jpg",
-                children: [
-                    {
-                        name: "Moon",
-                        radius: 1,
-                        rotationPeriod: .5,
-                        distanceFromParent: 2,
-                        yearLength: 27.3,
-                        texture: "textures/MOON-map.jpg",
-                        children: []
-                    }
-                ]
-            },
-            {
-                name: "Mars",
-                radius: 4,
-                rotationPeriod: 1,
-                distanceFromParent: 15,
-                yearLength: 687,
-                texture: "textures/MARS-map.jpg",
-                children: []
-            }
-        ]
-    }   
-    recursePlanets(temp); 
+    if (!details.parentGroup){
+        scene.add(pivotGroup);
+    }
+    else{
+        //If the subsystem has a parent group to belong to, put the subsystem into that group
+        //ex. EarthSystem --> SunSystem
+        details.parentGroup.add(pivotGroup)
+        pivotGroup.translateX(details.distanceFromParent * DISTANCESCALE);
+    }            
+
+    //For each child of this body
+    for (var i = 0; i < details.children.length; i++){
+        //Assign a parent group, since the child must be in this system as well
+        details.children[i].parentGroup = pivotGroup;
+        //Assign the parent in the Object itself for convenience
+        details.children[i].parent = details;
+        //Add a ring to for the child
+        scene.add(makeRing(details.children[i]));
+        //Run through this again
+        recursePlanets(details.children[i]);
+    }        
 }
 
 //Makes a planet based on its details and returns the mesh
@@ -88,24 +54,75 @@ function makePlanet(details){
     var planetTexture = THREE.ImageUtils.loadTexture(details.texture);
     var planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
     planet = new THREE.Mesh(sphere, planetMaterial);
+    var rad = details.radius * SIZESCALE;
+    var dist = details.distanceFromParent * DISTANCESCALE;
+    console.log(details.name + " - Radius: " + rad + " - Distance: " + dist);
+    
+    planet.scale.set(rad, rad, rad);
+    //planet.translateX(dist);
+
     details.mesh = planet;
     return planet;
 }
 
+//Makes a ring that shows a planet's path given the planet's details
+function makeRing(details){
+    //Planetary ring, not useful right now
+    var ringGeometry = new THREE.RingGeometry(1, 1.001, 100, 100);
+    ringGeometry.rotateX(Math.PI / 2); //Put it on the same plane as planets
+    var ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+    var ring = new THREE.Mesh(ringGeometry, ringMaterial);        
+
+    var rad = details.distanceFromParent * DISTANCESCALE;
+    ring.scale.set(rad, rad, rad);    
+    return ring;
+}
+
 function init(){
-    generatePlanets();
+
+
+
     //Stores all of the meshes conveniently
     objects = [];
-
+    planets = [];
+    
     //1 Full earth rotation every 1 minute (1440 = number of minutes in a day)
     speedMultiplier = 1440;
     
     //Maintain Aspect Ratio
-    window.onresize = function() {
+    window.onresize = function(){
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
+
+
+    //handle clicking
+    window.onmousedown = function(event){        
+        event.preventDefault();
+        //Grab mouse positions
+        mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+        mouse.y = - (event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+        
+        //Take a snaphot of what's going on
+        raycaster.setFromCamera(mouse, camera);
+
+        //Grab the objects that were intersected
+        var intersects = raycaster.intersectObjects(planets); 
+
+        //If an object was intersected by the mouse
+        if (intersects.length > 0) {                        
+            //Run the object's function
+            //intersects[0].object.callback();
+            
+            //Change controls to center on that object
+            controls.objectToFollow = intersects[0].object;
+            controls.target = controls.objectToFollow.position;
+            controls.target.set(intersects[0].object.position.x, intersects[0].object.position.y, intersects[0].object.position.z);
+            controls.update();
+        }
+    }
+
 
     //Required THREE.js stuff
     scene = new THREE.Scene();
@@ -118,53 +135,60 @@ function init(){
     camera.position.z = 25;
     document.body.appendChild(renderer.domElement);
     controls = new THREE.OrbitControls(camera);
+    
+    //Give the controls a default object to latch onto
+    controls.objectToFollow = new THREE.Object3D();
 
-    //Planetary ring, not useful right now
-    var ringGeometry = new THREE.RingGeometry(1, 1.01, 64, 64);
-    ringGeometry.rotateX(Math.PI / 2); //Put it on the same plane
-    var ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-    var ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.scale.set(5, 5, 5);
+    //Grab planet information from JSON
+    $.getJSON("/planets.json", function(data){        
+        recursePlanets(data);
+    });        
 
     //Make bodies
-    moon = makePlanet({texture: "textures/moon-map.jpg"});
-    earth = makePlanet({texture: "textures/earth-map.jpg"});
-    sun = makePlanet({texture: "textures/sun-map.jpg"});
+    //moon = makePlanet({texture: "textures/moon-map.jpg"});
+    //earth = makePlanet({texture: "textures/earth-map.jpg"});
+    //sun = makePlanet({texture: "textures/sun-map.jpg"});
 
     //Dummy group defining earth-moon system
-    earthPivot = new THREE.Group();
-    earthPivot.add(earth, moon);
+    //earthPivot = new THREE.Group();
+    //earthPivot.add(earth, moon);
 
     //Dummy group defining sun-planet system
-    sunPivot = new THREE.Group();
-    sunPivot.add(earthPivot);    
-    sunPivot.add(sun, ring);
+    //sunPivot = new THREE.Group();
+    //sunPivot.add(earthPivot);    
+    //sunPivot.add(sun);
     
     //Move earth-moon system away from center (sun)
-    earthPivot.translateX(8);
+    //earthPivot.translateX(8);
 
     //Move moon away from center of earth-moon system (earth)
-    moon.translateX(3);
+    //moon.translateX(3);
       
     //Put the Solar System in the scene
-    scene.add(sunPivot);
+    //scene.add(sunPivot);
 }
 
 //What to do every frame
 function animate() {
     date = Date.now() * .01;
 
-    sun.rotateY(1);
+    //sun.rotateY(1);
 
     //cos(date * rate) * distance, 0, sin(date * rate) * distance
-    earthPivot.position.set(Math.cos(date * .01) * 5, 0, Math.sin(date * .01) * 5)
+    //earthPivot.position.set(Math.cos(date * .01) * 5, 0, Math.sin(date * .01) * 5)
 
-    earth.rotateY(1)
+    //earth.rotateY(1)
     
-    moon.position.set(Math.cos(date) * 3, 0, Math.sin(date) * 3)
+    //moon.position.set(Math.cos(date) * 3, 0, Math.sin(date) * 3)
     
     //Get frame    
     requestAnimationFrame(animate);
+
+    //Update Mouse/Scroll controls
+    //Update the control target based on the position of the object assigned to it
+    //controls.target = controls.objectToFollow.position;
+    controls.update();
+
 
     //Render
     renderer.render(scene, camera);

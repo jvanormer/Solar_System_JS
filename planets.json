@@ -1,5 +1,6 @@
 {
     "name": "Sun",
+    "type": "star",
     "radius": 695500,
     "rotationPeriod": 1,
     "distanceFromParent": 0,
@@ -8,6 +9,7 @@
     "children": [
         {
             "name": "Mercury",
+            "type": "planet",
             "radius": 2439.5,
             "rotationPeriod": 58.65,
             "distanceFromParent": 57900000,
@@ -17,6 +19,7 @@
         },
         {
             "name": "Venus",
+            "type": "planet",
             "radius": 6052,
             "rotationPeriod": -243.02083333333334,
             "distanceFromParent": 108200000,
@@ -26,6 +29,7 @@
         },
         {
             "name": "Earth",
+            "type": "planet",
             "radius": 6378,
             "rotationPeriod": 0.9958333333333332,
             "distanceFromParent": 149600000,
@@ -34,6 +38,7 @@
             "children": [
                 {
                     "name": "Moon",
+                    "type": "moon",
                     "radius": 1737.5,
                     "rotationPeriod": 27.320833333333336,
                     "distanceFromParent": 384000,
@@ -45,6 +50,7 @@
         },    
         {
             "name": "Mars",
+            "type": "planet",
             "radius": 3396,
             "rotationPeriod": 1.0250000000000001,
             "distanceFromParent": 227900000,
@@ -54,6 +60,7 @@
         },
         {
             "name": "Jupiter",
+            "type": "planet",
             "radius": 71492,
             "rotationPeriod": 0.41250000000000003,
             "distanceFromParent": 778600000,
@@ -63,6 +70,7 @@
         },
         {
             "name": "Saturn",
+            "type": "planet",
             "radius": 60268,
             "rotationPeriod": 0.4458333333333333,
             "distanceFromParent": 1433500000,
@@ -72,6 +80,7 @@
         },
         {
             "name": "Uranus",
+            "type": "planet",
             "radius": 25559,
             "rotationPeriod": -0.7166666666666667,
             "distanceFromParent": 2872500000,
@@ -81,6 +90,7 @@
         },
         {
             "name": "Neptune",
+            "type": "planet",
             "radius": 24764,
             "rotationPeriod": 0.6708333333333334,
             "distanceFromParent": 4495100000,
@@ -90,6 +100,7 @@
         },
         {
             "name": "Pluto",
+            "type": "planet",
             "radius": 1185,
             "rotationPeriod": -6.3875,
             "distanceFromParent": 5906400000,
