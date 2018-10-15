@@ -1,3 +1,4 @@
+//Make the solar system actually navigable
 const SIZESCALE = 0.0001;
 const DISTANCESCALE = 0.000001;
 
@@ -5,59 +6,32 @@ var scene, camera, renderer, sun, earth, moon, earthMoonGroup, speedMultiplier, 
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
-function recursePlanets(details){                  
-    //The sun is too damn big  
-    if (details.name == "Sun"){                
-        details.radius /= 4;
-    }    
-        
-    //Make body    
-    details.mesh = makePlanet(details);        
 
-    //Make pivot
-    details.pivot = new THREE.Group();    
-    details.pivot.add(details.mesh);    
-    
-    //If the object has a parent defined
-    if (details.parent){
-        //Set this object's pivot to the parent's location
-        details.pivot.position.set(details.parent.pivot.position.x, details.parent.pivot.position.y, details.parent.pivot.position.z);
-        //Add this object's pivot (group) to the parent group
-        details.parent.pivot.add(details.pivot);        
-        //Move this object's group away from the parent group
-        details.pivot.translateX(details.distanceFromParent * DISTANCESCALE);        
-        console.log("Name: " + details.name + " Obj. X Position: " + details.mesh.position.x + " Group X Position: " + details.pivot.position.x);
+//Class defining planet details and utility functions
+class PlanetDetails{    
+    //Planet name, radius, distance from parent, texture file, and parent itself
+    constructor(name, radius, distanceFromParent, texture, parent){
+        this.name = name;
+        this.radius = radius;
+        this.distanceFromParent = distanceFromParent;
+        this.texture = texture;        
     }
-    
-    //For each child of this body
-    for (var i = 0; i < details.children.length; i++){                
-        //Assign the parent in the Object itself for convenience
-        details.children[i].parent = details;
-        //Add a ring to for the child
-        scene.add(makeRing(details.children[i]));
-        //Run through this again
-        recursePlanets(details.children[i]);
-    } 
-    if (!details.parent){
-        system = details;
+
+    //Returns a mesh as described by the constructor
+    get mesh(){
+        var sphere = new THREE.SphereGeometry(1, 32, 32);    
+        var planetTexture = THREE.ImageUtils.loadTexture(this.texture);
+        var planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
+        var planet = new THREE.Mesh(sphere, planetMaterial);
+        var rad = this.radius * SIZESCALE;
+        var dist = this.distanceFromParent * DISTANCESCALE;        
+        planet.scale.set(rad, rad, rad);        
+        return planet;
+    }     
+
+    toString(){
+        return "Details: " + this.name;
     }
-}
-
-//Makes a planet based on its details and returns the mesh
-function makePlanet(details){
-    var sphere = new THREE.SphereGeometry(1, 32, 32);    
-    var planetTexture = THREE.ImageUtils.loadTexture(details.texture);
-    var planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
-    planet = new THREE.Mesh(sphere, planetMaterial);
-    var rad = details.radius * SIZESCALE;
-    var dist = details.distanceFromParent * DISTANCESCALE;
-    console.log(details.name + " - Radius: " + rad + " - Distance: " + dist);
-    
-    planet.scale.set(rad, rad, rad);
-    //planet.translateX(dist);
-
-    details.mesh = planet;
-    return planet;
 }
 
 //Makes a ring that shows a planet's path given the planet's details
@@ -88,7 +62,6 @@ function init(){
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
-
 
     //handle clicking
     window.onmousedown = function(event){        
@@ -130,50 +103,49 @@ function init(){
     controls = new THREE.OrbitControls(camera);
     
     //Give the controls a default object to latch onto
-    controls.objectToFollow = new THREE.Object3D();
+    controls.objectToFollow = new THREE.Object3D();        
 
-    //Grab planet information from JSON
-    $.getJSON("/planets.json", function(data){        
-        recursePlanets(data);
-    });        
+    //Define details
+    moonDetails = new PlanetDetails("Moon", 1737.5, 384000, "textures/moon-map.jpg");
+    console.log(moonDetails.thing);
+    earthDetails = new PlanetDetails("Earth", 6378, 149600000, "textures/earth-map.jpg");
+    sunDetails = new PlanetDetails("Sun", 695500 / 4, 0, "textures/sun-map.jpg");            
     
-
-    //Make bodies
-    //moon = makePlanet({texture: "textures/moon-map.jpg"});
-    //earth = makePlanet({texture: "textures/earth-map.jpg"});
-    //sun = makePlanet({texture: "textures/sun-map.jpg"});
+    moon = moonDetails.mesh;
+    earth = earthDetails.mesh;
+    sun = sunDetails.mesh;
 
     //Dummy group defining earth-moon system
-    //earthPivot = new THREE.Group();
-    //earthPivot.add(earth, moon);
+    earthPivot = new THREE.Group();
+    earthPivot.add(earth, moon);
 
     //Dummy group defining sun-planet system
-    //sunPivot = new THREE.Group();
-    //sunPivot.add(earthPivot);    
-    //sunPivot.add(sun);
+    sunPivot = new THREE.Group();
+    sunPivot.add(earthPivot);    
+    sunPivot.add(sun);
     
     //Move earth-moon system away from center (sun)
-    //earthPivot.translateX(8);
+    earthPivot.translateX(50);
 
     //Move moon away from center of earth-moon system (earth)
-    //moon.translateX(3);
+    moon.translateX(10);
       
     //Put the Solar System in the scene
-    //scene.add(sunPivot);
+    scene.add(sunPivot);
 }
 
 //What to do every frame
 function animate() {
     date = Date.now() * .01;
 
-    //sun.rotateY(1);
+    sun.rotateY(Math.PI/128);
 
     //cos(date * rate) * distance, 0, sin(date * rate) * distance
-    //earthPivot.position.set(Math.cos(date * .01) * 5, 0, Math.sin(date * .01) * 5)
+    earthPivot.position.set(Math.cos(date * .001) * 50, 0, Math.sin(date * .001) * 50)
 
-    //earth.rotateY(1)
+    earth.rotateY(.001)
     
-    //moon.position.set(Math.cos(date) * 3, 0, Math.sin(date) * 3)
+    moon.position.set(Math.cos(date) * 10, 0, Math.sin(date) * 10)
     
     //Get frame    
     requestAnimationFrame(animate);
