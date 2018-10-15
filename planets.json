@@ -2,7 +2,7 @@
     "name": "Sun",
     "type": "star",
     "radius": 695500,
-    "rotationPeriod": 1,
+    "rotationPeriod": 24,
     "distanceFromParent": 0,
     "yearLength": 0,
     "texture": "textures/sun-map.jpg",

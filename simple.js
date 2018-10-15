@@ -2,7 +2,7 @@
 const SIZESCALE = 0.0001;
 const DISTANCESCALE = 0.000001;
 
-var scene, camera, renderer, sun, earth, moon, earthMoonGroup, speedMultiplier, controls, objects, currind, earthPivots, planets, groups;
+var scene, camera, renderer, sun, earth, moon, earthPivot, speedMultiplier, controls, objects, currind, earthPivots, planets, groups;
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
@@ -10,11 +10,14 @@ var mouse = new THREE.Vector2();
 //Class defining planet details and utility functions
 class PlanetDetails{    
     //Planet name, radius, distance from parent, texture file, and parent itself
-    constructor(name, radius, distanceFromParent, texture, parent){
+    constructor(name, radius, distanceFromParent, rotationPeriod, yearLength, texture, parent){
         this.name = name;
         this.radius = radius;
         this.distanceFromParent = distanceFromParent;
-        this.texture = texture;        
+        this.rotationPeriod = rotationPeriod;
+        this.yearLength = yearLength;
+        this.texture = texture;   
+        this.parent = parent;     
     }
 
     //Returns a mesh as described by the constructor
@@ -27,7 +30,11 @@ class PlanetDetails{
         var dist = this.distanceFromParent * DISTANCESCALE;        
         planet.scale.set(rad, rad, rad);        
         return planet;
-    }     
+    }      
+
+    updateRotation(){
+        return Math.cos(date * this.yearLength * 100) * this.distanceFromParent, 0, Math.sin(date * this.yearLength * 100) * this.distanceFromParent
+    }
 
     toString(){
         return "Details: " + this.name;
@@ -106,14 +113,14 @@ function init(){
     controls.objectToFollow = new THREE.Object3D();        
 
     //Define details
-    moonDetails = new PlanetDetails("Moon", 1737.5, 384000, "textures/moon-map.jpg");
-    console.log(moonDetails.thing);
-    earthDetails = new PlanetDetails("Earth", 6378, 149600000, "textures/earth-map.jpg");
-    sunDetails = new PlanetDetails("Sun", 695500 / 4, 0, "textures/sun-map.jpg");            
-    
-    moon = moonDetails.mesh;
+    sunDetails = new PlanetDetails("Sun", 695500 / 4, 0, 24, 0, "textures/sun-map.jpg");            
+    //Real distances are in JSON file, but are too big to actually utilize
+    earthDetails = new PlanetDetails("Earth", 6378, 50, 0.9958333333333332, 365.2, "textures/earth-map.jpg", sunDetails);
+    moonDetails = new PlanetDetails("Moon", 1737.5, 10, 27.320833333333336, 27.3, "textures/moon-map.jpg", earthDetails);    
+            
+    moon = moonDetails.mesh;    
     earth = earthDetails.mesh;
-    sun = sunDetails.mesh;
+    sun = sunDetails.mesh;        
 
     //Dummy group defining earth-moon system
     earthPivot = new THREE.Group();
@@ -125,10 +132,10 @@ function init(){
     sunPivot.add(sun);
     
     //Move earth-moon system away from center (sun)
-    earthPivot.translateX(50);
+    earthPivot.translateX(earthDetails.distanceFromParent);
 
     //Move moon away from center of earth-moon system (earth)
-    moon.translateX(10);
+    moon.translateX(moonDetails.distanceFromParent);
       
     //Put the Solar System in the scene
     scene.add(sunPivot);
@@ -136,16 +143,31 @@ function init(){
 
 //What to do every frame
 function animate() {
-    date = Date.now() * .01;
+    //Get ratio of day completed (epoch in days, just the decimal portion)
+    date = (Date.now() / 1000 / 60 / 60 / 24) % 1;
+        
 
-    sun.rotateY(Math.PI/128);
+    /// ROTATE
+    //date * 2pi would be realtime
+    //Date * 2pi * 24 is 24 times faster (1 day = 1 hour)
+    //Date * 2pi * 24 * 60 (1 day = 1 minute)
+    //Date * 2pi * 24 * 60 * 60 (1 day = 1 second)
+    //1 rotation (2pi) 
+    earth.rotation.y = date * 2 * Math.PI * speedMultiplier * earthDetails.rotationPeriod;
+    sun.rotation.y = date * 2 * Math.PI * speedMultiplier * sunDetails.rotationPeriod;
+    moon.rotation.y = date * 2 * Math.PI * speedMultiplier * moonDetails.rotationPeriod;
 
+    // REVOLVE
     //cos(date * rate) * distance, 0, sin(date * rate) * distance
-    earthPivot.position.set(Math.cos(date * .001) * 50, 0, Math.sin(date * .001) * 50)
 
-    earth.rotateY(.001)
+
+    //Working on putting this into the class itself
+
+    earthPivot.position.set(Math.cos(date * earthDetails.yearLength * 100) * 50, 0, Math.sin(date * earthDetails.yearLength * 100) * 50)        
     
-    moon.position.set(Math.cos(date) * 10, 0, Math.sin(date) * 10)
+    //earthPivot.position.set(earthDetails.updateRotation());
+
+    moon.position.set(Math.cos(date * moonDetails.yearLength * 100) * 10, 0, Math.sin(date * moonDetails.yearLength * 100) * 10)
     
     //Get frame    
     requestAnimationFrame(animate);
