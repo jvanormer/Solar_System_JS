@@ -2,10 +2,17 @@
 const SIZESCALE = 0.0001;
 const DISTANCESCALE = 0.000001;
 
+//I don't want to type "2 * Math.PI" all the time
+const tau = 2 * Math.PI;
+
 var scene, camera, renderer, sun, earth, moon, earthPivot, speedMultiplier, controls, objects, currind, earthPivots, planets, groups;
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
+//Get ratio of day completed (epoch in days, just the decimal portion)
+function getDayCompletion(){
+    return (Date.now() / 1000 / 60 / 60 / 24) % 1;
+}
 
 //Class defining planet details and utility functions
 class PlanetDetails{    
@@ -14,8 +21,10 @@ class PlanetDetails{
         this.name = name;
         this.radius = radius;
         this.distanceFromParent = distanceFromParent;
+        //1 over Time in earth days it takes to rotate
         this.rotationPeriod = rotationPeriod;
-        this.yearLength = yearLength;
+        //1 over Time it takes in days to orbit parent
+        this.yearLength = 1 /yearLength;
         this.texture = texture;   
         this.parent = parent;     
     }
@@ -26,14 +35,25 @@ class PlanetDetails{
         var planetTexture = THREE.ImageUtils.loadTexture(this.texture);
         var planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
         var planet = new THREE.Mesh(sphere, planetMaterial);
-        var rad = this.radius * SIZESCALE;
-        var dist = this.distanceFromParent * DISTANCESCALE;        
+        var rad = this.radius * SIZESCALE;         
         planet.scale.set(rad, rad, rad);        
         return planet;
     }      
 
+    //Returns the new rotation the object should have considering the time
+        //date * 2pi would be realtime
+        //Date * 2pi * 24 is 24 times faster (1 day = 1 hour)
+        //Date * 2pi * 24 * 60 (1 day = 1 minute)
+        //Date * 2pi * 24 * 60 * 60 (1 day = 1 second)
+        //1 rotation (2pi)    
     updateRotation(){
-        return Math.cos(date * this.yearLength * 100) * this.distanceFromParent, 0, Math.sin(date * this.yearLength * 100) * this.distanceFromParent
+        return getDayCompletion() * tau * speedMultiplier * this.rotationPeriod;
+    }
+
+    //Returns the new position to which the object should be considering the time
+        //cos(date * rate) * distance, 0, sin(date * rate) * distance    
+    updateRevolution(){        
+        return new THREE.Vector3(Math.cos(getDayCompletion() * this.yearLength * speedMultiplier) * this.distanceFromParent, 0, Math.sin(getDayCompletion() * this.yearLength * speedMultiplier) * this.distanceFromParent);
     }
 
     toString(){
@@ -60,42 +80,16 @@ function init(){
     objects = [];
     planets = [];
     
-    //1 Full earth rotation every 1 minute (1440 = number of minutes in a day)
-    speedMultiplier = 1440;
+    //speedMultiplier = 1440; //1 Full earth rotation every 1 minute --> (1440 = number of minutes in a day, 24 * 60)
+    //speedMultiplier = 1440 * 60; // 1 Full earth rotation every 1 second (365 seconds in a year)
+    speedMultiplier = 1440 * 60 * 365; //1 full earth revolution every 1/365 second (1 y per second)
     
     //Maintain Aspect Ratio
     window.onresize = function(){
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    //handle clicking
-    window.onmousedown = function(event){        
-        event.preventDefault();
-        //Grab mouse positions
-        mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
-        mouse.y = - (event.clientY / renderer.domElement.clientHeight) * 2 + 1;
-        
-        //Take a snaphot of what's going on
-        raycaster.setFromCamera(mouse, camera);
-
-        //Grab the objects that were intersected
-        var intersects = raycaster.intersectObjects(planets); 
-
-        //If an object was intersected by the mouse
-        if (intersects.length > 0) {                        
-            //Run the object's function
-            //intersects[0].object.callback();
-            
-            //Change controls to center on that object
-            controls.objectToFollow = intersects[0].object;
-            controls.target = controls.objectToFollow.position;
-            controls.target.set(intersects[0].object.position.x, intersects[0].object.position.y, intersects[0].object.position.z);
-            controls.update();
-        }
-    }
-
+    } 
 
     //Required THREE.js stuff
     scene = new THREE.Scene();
@@ -107,16 +101,14 @@ function init(){
     renderer.setClearColor(0x000000, 0);
     camera.position.z = 25;
     document.body.appendChild(renderer.domElement);
-    controls = new THREE.OrbitControls(camera);
-    
-    //Give the controls a default object to latch onto
-    controls.objectToFollow = new THREE.Object3D();        
+    controls = new THREE.OrbitControls(camera);    
 
     //Define details
-    sunDetails = new PlanetDetails("Sun", 695500 / 4, 0, 24, 0, "textures/sun-map.jpg");            
+    //Note: Since the sun's rotation period is shown as "24 days", that means it makes a full rotation in that time, so I need to enter 1 / 24
+    sunDetails = new PlanetDetails("Sun", 695500 / 4, 0, 1 /24, 0, "textures/sun-map.jpg");            
     //Real distances are in JSON file, but are too big to actually utilize
-    earthDetails = new PlanetDetails("Earth", 6378, 50, 0.9958333333333332, 365.2, "textures/earth-map.jpg", sunDetails);
-    moonDetails = new PlanetDetails("Moon", 1737.5, 10, 27.320833333333336, 27.3, "textures/moon-map.jpg", earthDetails);    
+    earthDetails = new PlanetDetails("Earth", 6378, 50, 1 / 0.9958333333333332, 365.2, "textures/earth-map.jpg", sunDetails);
+    moonDetails = new PlanetDetails("Moon", 1737.5, 10, 1 / 27.320833333333336, 27.3, "textures/moon-map.jpg", earthDetails);    
             
     moon = moonDetails.mesh;    
     earth = earthDetails.mesh;
@@ -143,40 +135,17 @@ function init(){
 
 //What to do every frame
 function animate() {
-    //Get ratio of day completed (epoch in days, just the decimal portion)
-    date = (Date.now() / 1000 / 60 / 60 / 24) % 1;
-        
+    /// ROTATE 
+    earth.rotation.y = earthDetails.updateRotation();    
+    sun.rotation.y = sunDetails.updateRotation();    
+    moon.rotation.y = moonDetails.updateRotation();
 
-    /// ROTATE
-    //date * 2pi would be realtime
-    //Date * 2pi * 24 is 24 times faster (1 day = 1 hour)
-    //Date * 2pi * 24 * 60 (1 day = 1 minute)
-    //Date * 2pi * 24 * 60 * 60 (1 day = 1 second)
-    //1 rotation (2pi) 
-    earth.rotation.y = date * 2 * Math.PI * speedMultiplier * earthDetails.rotationPeriod;
-    sun.rotation.y = date * 2 * Math.PI * speedMultiplier * sunDetails.rotationPeriod;
-    moon.rotation.y = date * 2 * Math.PI * speedMultiplier * moonDetails.rotationPeriod;
+    // REVOLVE    
+    earthPivot.position.set(earthDetails.updateRevolution().x, earthDetails.updateRevolution().y, earthDetails.updateRevolution().z);    
+    moon.position.set(moonDetails.updateRevolution().x, moonDetails.updateRevolution().y, moonDetails.updateRevolution().z);    
 
-    // REVOLVE
-    //cos(date * rate) * distance, 0, sin(date * rate) * distance
-
-
-    //Working on putting this into the class itself
-
-    earthPivot.position.set(Math.cos(date * earthDetails.yearLength * 100) * 50, 0, Math.sin(date * earthDetails.yearLength * 100) * 50)        
-    
-    //earthPivot.position.set(earthDetails.updateRotation());
-
-    moon.position.set(Math.cos(date * moonDetails.yearLength * 100) * 10, 0, Math.sin(date * moonDetails.yearLength * 100) * 10)
-    
     //Get frame    
-    requestAnimationFrame(animate);
-
-    //Update Mouse/Scroll controls
-    //Update the control target based on the position of the object assigned to it
-    //controls.target = controls.objectToFollow.position;
-    controls.update();
-
+    requestAnimationFrame(animate);    
 
     //Render
     renderer.render(scene, camera);
