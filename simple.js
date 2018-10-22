@@ -1,4 +1,6 @@
 //Make the solar system actually navigable
+
+//Try logarithmic scaling
 const SIZESCALE = 0.0001;
 const DISTANCESCALE = 0.000001;
 
