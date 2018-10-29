@@ -1,6 +1,7 @@
 //Make the solar system actually navigable
 
 //Try logarithmic scaling
+
 const SIZESCALE = 0.0001;
 const DISTANCESCALE = 0.000001;
 
@@ -24,8 +25,11 @@ class PlanetDetails{
     //Planet name, radius, distance from parent, texture file, and parent itself
     constructor(name, radius, distanceFromParent, rotationPeriod, yearLength, texture, parent){
         this.name = name;
-        this.radius = radius;
-        this.distanceFromParent = distanceFromParent;
+        //Logarithmic distance scale
+        this.radius = radius * SIZESCALE;
+        this.distanceFromParent = 2 * Math.log(distanceFromParent);
+        //If there exists a parent, offset its radius to the orbit distance
+        this.distanceFromParent += parent ? parent.radius : 0;
         //1 over Time in earth days it takes to rotate
         this.rotationPeriod = 1 / rotationPeriod;
         //1 over Time it takes in days to orbit parent
@@ -40,7 +44,7 @@ class PlanetDetails{
         var planetTexture = THREE.ImageUtils.loadTexture(this.texture);
         var planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
         var planet = new THREE.Mesh(sphere, planetMaterial);
-        var rad = this.radius * SIZESCALE;         
+        var rad = this.radius;         
         planet.scale.set(rad, rad, rad);    
         planet.name = this.name;    
         return planet;
@@ -87,14 +91,29 @@ function init(){
     //Define details
     //Note: Since the sun's rotation period is shown as "24 days", that means it makes a full rotation in that time, so I need to enter 1 / 24
     //Real distances are in JSON file, but are too big to actually utilize
-    sunDetails = new PlanetDetails("Sun", 695500 / 4, 0, 24, 0, "textures/sun-map.jpg");                    
-    earthDetails = new PlanetDetails("Earth", 6378, 50, 0.9958333333333332, 365.2, "textures/earth-map.jpg", sunDetails);
-    moonDetails = new PlanetDetails("Moon", 1737.5, 10, 27.320833333333336, 27.3, "textures/moon-map.jpg", earthDetails);    
+    sunDetails = new PlanetDetails("Sun", 695500, 0, 24, 0, "textures/sun-map.jpg");                    
+    earthDetails = new PlanetDetails("Earth", 6378, 149600000, 0.9958333333333332, 365.2, "textures/earth-map.jpg", sunDetails);
+    moonDetails = new PlanetDetails("Moon", 1737.5, 384000, 27.320833333333336, 27.3, "textures/moon-map.jpg", earthDetails);    
 
     //Grab meshes
     moon = moonDetails.mesh;    
     earth = earthDetails.mesh;
     sun = sunDetails.mesh;        
+
+    /*
+        recurse (p)
+            make pivot
+            stack = [];
+            for child in p.children
+                stack.push(child)
+                recurse(child)
+
+
+        mars
+        moon
+        earth
+        sun
+    */
 
     //Dummy group defining earth-moon system
     earthPivot = new THREE.Group();
