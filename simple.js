@@ -9,7 +9,7 @@ const DISTANCESCALE = 0.000001;
 const TAU = 2 * Math.PI;
 
 //Global variables
-var scene, camera, renderer, sun, earth, moon, earthPivot, controls;
+var scene, camera, renderer, sun, earth, moon, controls;
 var objects = [];
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -20,14 +20,26 @@ function getDayCompletion(){
     return (Date.now() / 1000 / 60 / 60 / 24) % 1;
 }
 
+//Makes a planet based on its details and returns the mesh
+function makeMesh(details){
+    var sphere = new THREE.SphereGeometry(1, 32, 32);    
+    var planetTexture = THREE.ImageUtils.loadTexture(details.texture);
+    var planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
+    planet = new THREE.Mesh(sphere, planetMaterial);
+    var rad = details.radius;
+    var dist = details.distanceFromParent;
+    planet.scale.set(rad, rad, rad);
+    return planet;
+}
+
 //Class defining planet details and utility functions
 class PlanetDetails{    
     //Planet name, radius, distance from parent, texture file, and parent itself
     constructor(name, radius, distanceFromParent, rotationPeriod, yearLength, texture, parent){
         this.name = name;
         this.radius = radius * SIZESCALE;
-        
-        this.distanceFromParent = Math.log10(distanceFromParent);
+        //Absolute best scaling so far is this
+        this.distanceFromParent = Math.pow(distanceFromParent, .25)
         //If there exists a parent, offset its radius to the orbit distance
         this.distanceFromParent += parent ? parent.radius : 0;
         //1 over Time in earth days it takes to rotate
@@ -84,7 +96,7 @@ function makeRing(details){
     return ring;
 }
 
-function recurse(planetDetails, parentDetails){
+//function recurse(planetDetails, parentDetails){
     //create mesh for planet
     //planetDetails.mesh = createMesh()
     //create pivot for planet
@@ -101,6 +113,20 @@ function recurse(planetDetails, parentDetails){
     //  recurse(child, planetDetails)
     //}
 
+//}
+
+//CONFIRMED CREATES THE CORRECT STRUCTURE WHEN GIVEN A JSON SOLAR SYSTEM
+//Now on to actually rendering it...
+function recurse(planet){
+    var planetPivot = new THREE.Group();                //Create Pivot
+    planetPivot.name = "GROUP FOR " + planet.name;
+    var planetMesh = makeMesh(planet);                  //Create Mesh for Planet
+    planetMesh.name = planet.name;
+    planetPivot.add(planetMesh);                        //Add that mesh to the pivot group
+    for (var i = 0; i < planet.children.length; i++){   //For each of the planet's children
+        planetPivot.add(recurse(planet.children[i]));   //Add the pivot group of the child
+    }
+    return planetPivot;                                 //Return pivot
 }
 
 //Set everything up
@@ -176,13 +202,27 @@ function animate() {
     controls.update();
 
     //ROTATE 
-    earth.rotation.y = earthDetails.updateRotation();
     sun.rotation.y = sunDetails.updateRotation();
+    mercury.rotation.y = mercuryDetails.updateRotation();
+    venus.rotation.y = venusDetails.updateRotation();
+    earth.rotation.y = earthDetails.updateRotation();
     moon.rotation.y = moonDetails.updateRotation();
+    mars.rotation.y = marsDetails.updateRotation();
+    jupiter.rotation.y = jupiterDetails.updateRotation();
+    saturn.rotation.y = saturnDetails.updateRotation();
+    uranus.rotation.y = uranusDetails.updateRotation();
+    neptune.rotation.y = neptuneDetails.updateRotation();
 
-    //REVOLVE    
+    //REVOLVE 
+    mercury.position.set(mercuryDetails.updateRevolution().x, mercuryDetails.updateRevolution().y, mercuryDetails.updateRevolution().z);
+    venus.position.set(venusDetails.updateRevolution().x, venusDetails.updateRevolution().y, venusDetails.updateRevolution().z);   
     earthPivot.position.set(earthDetails.updateRevolution().x, earthDetails.updateRevolution().y, earthDetails.updateRevolution().z);
     moon.position.set(moonDetails.updateRevolution().x, moonDetails.updateRevolution().y, moonDetails.updateRevolution().z);
+    mars.position.set(marsDetails.updateRevolution().x, marsDetails.updateRevolution().y, marsDetails.updateRevolution().z);
+    jupiter.position.set(jupiterDetails.updateRevolution().x, jupiterDetails.updateRevolution().y, jupiterDetails.updateRevolution().z);
+    saturn.position.set(saturnDetails.updateRevolution().x, saturnDetails.updateRevolution().y, saturnDetails.updateRevolution().z);
+    uranus.position.set(uranusDetails.updateRevolution().x, uranusDetails.updateRevolution().y, uranusDetails.updateRevolution().z);
+    neptune.position.set(neptuneDetails.updateRevolution().x, neptuneDetails.updateRevolution().y, neptuneDetails.updateRevolution().z);
 
     //Get frame    
     requestAnimationFrame(animate);    
