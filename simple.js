@@ -124,7 +124,9 @@ function recurse(planet){
     planetMesh.name = planet.name;
     planetPivot.add(planetMesh);                        //Add that mesh to the pivot group
     for (var i = 0; i < planet.children.length; i++){   //For each of the planet's children
-        planetPivot.add(recurse(planet.children[i]));   //Add the pivot group of the child
+        childPivot = recurse(planet.children[i]);       
+        planetPivot.add(childPivot);                    //Add the pivot group of the child
+        childPivot.translateX(planet.children[i].distanceFromParent);
     }
     return planetPivot;                                 //Return pivot
 }
