@@ -38,10 +38,17 @@ class PlanetDetails{
     constructor(name, radius, distanceFromParent, rotationPeriod, yearLength, texture, parent){
         this.name = name;
         this.radius = radius * SIZESCALE;
-        //Absolute best scaling so far is this
-        this.distanceFromParent = Math.pow(distanceFromParent, .25)
+        
+        //this.distanceFromParent = Math.log(distanceFromParent);
+        this.distanceFromParent = distanceFromParent * .000001;
+        //Absolute best scaling so far is this        
+        //this.distanceFromParent = Math.pow(distanceFromParent, .25)
+        
+        //Add own radius to distance (it isn't measured from the center)
+        this.distanceFromParent += this.radius;
         //If there exists a parent, offset its radius to the orbit distance
         this.distanceFromParent += parent ? parent.radius : 0;
+
         //1 over Time in earth days it takes to rotate
         this.rotationPeriod = 1 / rotationPeriod;
         //1 over Time it takes in days to orbit parent
@@ -83,16 +90,17 @@ class PlanetDetails{
 }
 
 //Makes a ring that shows a planet's path given the planet's details
-function makeRing(details){
+function makeRing(details, mesh){
     //Planetary ring, not useful right now
     var ringGeometry = new THREE.RingGeometry(1, 1.001, 100, 100);
     ringGeometry.rotateX(Math.PI / 2); //Put it on the same plane as planets
     var ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
     var ring = new THREE.Mesh(ringGeometry, ringMaterial);        
 
-    var rad = details.distanceFromParent * DISTANCESCALE;
-    ring.scale.set(rad, rad, rad);    
-    ring.position.set(details.parent.pivot.position.x, details.parent.pivot.position.y, details.parent.pivot.position.z);
+    var rad = details.distanceFromParent;
+    ring.scale.set(rad, rad, rad);  
+    ring.position.set(mesh.getWorldPosition().x, mesh.getWorldPosition().y, mesh.getWorldPosition().z);  
+    //ring.position.set(mesh.parent.position.x, mesh.parent.position.y, mesh.parent.position.z);
     return ring;
 }
 
@@ -153,7 +161,6 @@ function init(){
     uranusDetails = new PlanetDetails("Uranus", 25559, 2872500000, -0.7166666666666667, 30589, "textures/URANUS-map.jpg", sunDetails);
     neptuneDetails = new PlanetDetails("Neptune", 24764, 4495100000, 0.6708333333333334, 59800, "textures/NEPTUNE-map.jpg", sunDetails);
     
-
     //Grab meshes
     neptune = neptuneDetails.mesh;
     uranus = uranusDetails.mesh;
@@ -166,6 +173,7 @@ function init(){
     mercury = mercuryDetails.mesh;
     sun = sunDetails.mesh;        
 
+
     //Dummy group defining earth-moon system
     earthPivot = new THREE.Group();
     earthPivot.add(earth, moon);
@@ -175,7 +183,18 @@ function init(){
     sunPivot.add(earthPivot);    
     sunPivot.add(sun, mercury, venus, mars, jupiter, saturn, uranus, neptune);
     
-    //MOVE EVERYTHING
+    //Add Rings to parent pivot
+    sunPivot.add(makeRing(mercuryDetails, mercury));
+    sunPivot.add(makeRing(venusDetails, venus));
+    sunPivot.add(makeRing(earthDetails, earth));
+    earthPivot.add(makeRing(moonDetails, moon));
+    sunPivot.add(makeRing(marsDetails, mars));
+    sunPivot.add(makeRing(jupiterDetails, jupiter));
+    sunPivot.add(makeRing(saturnDetails, saturn));
+    sunPivot.add(makeRing(uranusDetails, uranus));
+    sunPivot.add(makeRing(neptuneDetails, neptune));
+
+    //Move everything away from parent pivot origin
     mercury.translateX(mercuryDetails.distanceFromParent);
     venus.translateX(venusDetails.distanceFromParent);
     mars.translateX(marsDetails.distanceFromParent);
@@ -236,7 +255,7 @@ function animate() {
 //Initializes base THREE JS stuff that basically won't be touched
 function initThree(){    
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000000000);
     renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     var bgTexture = THREE.ImageUtils.loadTexture("textures/stars-mw-map.jpg");
     scene.background = bgTexture;
