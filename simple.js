@@ -25,9 +25,9 @@ class PlanetDetails{
     //Planet name, radius, distance from parent, texture file, and parent itself
     constructor(name, radius, distanceFromParent, rotationPeriod, yearLength, texture, parent){
         this.name = name;
-        //Logarithmic distance scale
         this.radius = radius * SIZESCALE;
-        this.distanceFromParent = 2 * Math.log(distanceFromParent);
+        
+        this.distanceFromParent = Math.log10(distanceFromParent);
         //If there exists a parent, offset its radius to the orbit distance
         this.distanceFromParent += parent ? parent.radius : 0;
         //1 over Time in earth days it takes to rotate
@@ -36,7 +36,10 @@ class PlanetDetails{
         this.yearLength = 1 /yearLength;
         this.texture = texture;   
         this.parent = parent;     
+        console.log(this.name + " : Distance - " + this.distanceFromParent + ", Radius - " + this.radius);
+        
     }
+
 
     //Returns a mesh as described by the constructor
     get mesh(){
@@ -81,6 +84,25 @@ function makeRing(details){
     return ring;
 }
 
+function recurse(planetDetails, parentDetails){
+    //create mesh for planet
+    //planetDetails.mesh = createMesh()
+    //create pivot for planet
+    //planetDetails.pivot = new THREE.Group();
+    //Add mesh to pivot
+    //planetDetails.pivot.add(planetDetails.mesh);
+    //if parent is not null, add pivot to parent pivot and translate distance away
+    //if (parentDetails != null){
+    //  parentDetails.pivot.add(planetDetails.pivot)
+    //  planetDetails.pivot.translateX(planetDetails.distanceFromParent);
+    //}
+    //for each child, recurse
+    //for (child in planetDetails.children){
+    //  recurse(child, planetDetails)
+    //}
+
+}
+
 //Set everything up
 function init(){    
     //Initialize THREE    
@@ -91,29 +113,30 @@ function init(){
     //Define details
     //Note: Since the sun's rotation period is shown as "24 days", that means it makes a full rotation in that time, so I need to enter 1 / 24
     //Real distances are in JSON file, but are too big to actually utilize
+    //Name, radius, distance, day, year, text
     sunDetails = new PlanetDetails("Sun", 695500, 0, 24, 0, "textures/sun-map.jpg");                    
+    mercuryDetails = new PlanetDetails("Mercury", 2439.5, 57900000, 58.65, 88,"textures/MERCURY-map.jpg", sunDetails);
+    venusDetails = new PlanetDetails("Venus", 6052, 108200000, -243.02083333333334, 224.7, "textures/VENUS-map.jpg", sunDetails);
     earthDetails = new PlanetDetails("Earth", 6378, 149600000, 0.9958333333333332, 365.2, "textures/earth-map.jpg", sunDetails);
     moonDetails = new PlanetDetails("Moon", 1737.5, 384000, 27.320833333333336, 27.3, "textures/moon-map.jpg", earthDetails);    
+    marsDetails = new PlanetDetails("Mars", 3396, 227900000, 1.0250000000000001, 687, "textures/MARS-map.jpg", sunDetails);
+    jupiterDetails = new PlanetDetails("Jupiter", 71492, 778600000, 0.41250000000000003, 4331, "textures/JUPITER-map.jpg", sunDetails);
+    saturnDetails = new PlanetDetails("Saturn", 60268, 1433500000, 0.4458333333333333, 10747, "textures/SATURN-map.jpg", sunDetails);
+    uranusDetails = new PlanetDetails("Uranus", 25559, 2872500000, -0.7166666666666667, 30589, "textures/URANUS-map.jpg", sunDetails);
+    neptuneDetails = new PlanetDetails("Neptune", 24764, 4495100000, 0.6708333333333334, 59800, "textures/NEPTUNE-map.jpg", sunDetails);
+    
 
     //Grab meshes
+    neptune = neptuneDetails.mesh;
+    uranus = uranusDetails.mesh;
+    saturn = saturnDetails.mesh;
+    jupiter = jupiterDetails.mesh;
+    mars = marsDetails.mesh;
     moon = moonDetails.mesh;    
     earth = earthDetails.mesh;
+    venus = venusDetails.mesh;
+    mercury = mercuryDetails.mesh;
     sun = sunDetails.mesh;        
-
-    /*
-        recurse (p)
-            make pivot
-            stack = [];
-            for child in p.children
-                stack.push(child)
-                recurse(child)
-
-
-        mars
-        moon
-        earth
-        sun
-    */
 
     //Dummy group defining earth-moon system
     earthPivot = new THREE.Group();
@@ -122,8 +145,17 @@ function init(){
     //Dummy group defining sun-planet system
     sunPivot = new THREE.Group();
     sunPivot.add(earthPivot);    
-    sunPivot.add(sun);
+    sunPivot.add(sun, mercury, venus, mars, jupiter, saturn, uranus, neptune);
     
+    //MOVE EVERYTHING
+    mercury.translateX(mercuryDetails.distanceFromParent);
+    venus.translateX(venusDetails.distanceFromParent);
+    mars.translateX(marsDetails.distanceFromParent);
+    jupiter.translateX(jupiterDetails.distanceFromParent);
+    saturn.translateX(saturnDetails.distanceFromParent);
+    uranus.translateX(uranusDetails.distanceFromParent);
+    neptune.translateX(neptuneDetails.distanceFromParent);
+
     //Move earth-moon system away from center (sun)
     earthPivot.translateX(earthDetails.distanceFromParent);
 
@@ -131,7 +163,7 @@ function init(){
     moon.translateX(moonDetails.distanceFromParent);
 
     //Put planets into array
-    objects.push(sun, earth, moon);
+    objects.push(sun, mercury, venus, earth, moon, mars, jupiter, saturn, uranus, neptune);
       
     //Put the Solar System in the scene
     scene.add(sunPivot);
@@ -168,7 +200,7 @@ function initThree(){
     scene.background = bgTexture;
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000000, 0);
-    camera.position.z = 25;
+    camera.position.z = 1000;
     document.body.appendChild(renderer.domElement);
     controls = new THREE.OrbitControls(camera); 
     controls.objectToFollow = new THREE.Object3D();
