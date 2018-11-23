@@ -1,9 +1,0 @@
-Example:
-
-    {
-        "name": "Mercury",
-        "radius": 2439.5,           //KM
-        "rotationPeriod": 1407.6,   //Days
-        "distanceFromParent": 57.9, //KM
-        "yearLength": 88            //Days
-    },
