@@ -10,20 +10,26 @@
 */
 
 //Global variables
-var scene, camera, renderer, sun, earth, moon, controls;
+var scene, camera, renderer, controls, system;
 var objects = [];
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 var speedMultiplier = 1440;
 
+//I don't want to type "2 * Math.PI" all the time
+const TAU = 2 * Math.PI;
+
+//Gravity (For revolution)
+const G = 9.8;
+
 function gen(childCount, radius, distanceFromParent, parent){
     var SPHERE = new THREE.SphereGeometry(1, 256, 256);                     //Template of a sphere to be used in mesh creation
     
-    var MINYEAR = 88;                                                       //Mercury has an 88 day year
-    var MAXYEAR = 59800;                                                    //Neptune has a 59800 day year
+    //var MINYEAR = 88;                                                       //Mercury has an 88 day year
+    //var MAXYEAR = 59800;                                                    //Neptune has a 59800 day year
 
     const SIZESCALE = 0.0001;                                               //Arbitrary values to make a sensical size
-    const DISTANCESCALE = 0.000001;                                         //Arbitrary values to make a sensical size
+    const DISTANCESCALE = 0.001;                                            //Arbitrary values to make a sensical size
 
     var MINDAY = 0.41250000000000003;                                       //Jupiter has a .4125 day long day
     var MAXDAY = 243.02083333333334;                                        //Venus has a 243 day long day
@@ -36,7 +42,7 @@ function gen(childCount, radius, distanceFromParent, parent){
         radius: radius,                                                     //Sets the radius based on input (recursion will make this relative)
         rotationPeriod: 1 / randRange(MINDAY, MAXDAY),                      //It's actually 1 / period in Earth days, describes rotation rate
         distanceFromParent: distanceFromParent + radius,                    //Sets how far away this sits from parent
-        yearLength: 1 / randRange(MINYEAR, MAXYEAR),                        //It's actually 1 / length in Earth days, describes revolution rate
+        yearLength: 0,                                                      //It's actually 1 / length in Earth days, describes revolution rate
         pivot: new THREE.Group(),                                           //Create empty pivot for this planet/sun system     
         mesh: null,                                                         //Where the planet itself is stored
         children: [],                                                       //Where the orbiting systems are stored
@@ -56,6 +62,7 @@ function gen(childCount, radius, distanceFromParent, parent){
         pnt.distanceFromParent += parent.radius;                            //Account for parent's radius
         pnt.pivot.translateX(pnt.distanceFromParent);                       //Move this pivot away from parent (account for parent and own radius)
         color = {r: Math.random(), g: Math.random(), b: Math.random()};     //Planets can be any color, really        
+        pnt.yearLength = 1 / (TAU * Math.sqrt(Math.pow(pnt.distanceFromParent, 3) / (9.8 * parent.radius)));    //Orbital Period Function
     }
     else if(parent.type == "Planet"){
         pnt.type = "Moon";                                                  //Define body type
@@ -65,6 +72,8 @@ function gen(childCount, radius, distanceFromParent, parent){
         pnt.pivot.translateX(pnt.distanceFromParent);                       //Move this pivot away from parent
         var mooncolor = Math.random();                                      //Moons are grey, so rgb is one color
         color = {r: mooncolor, g: mooncolor, b: mooncolor};         
+        pnt.yearLength = 1 / (TAU * Math.sqrt(Math.pow(pnt.distanceFromParent, 3) / (G * parent.radius)));    //Orbital Period Function
+    
     }    
 
     var material = generateMaterial(color);
@@ -94,8 +103,10 @@ function gen(childCount, radius, distanceFromParent, parent){
         var minRadius = .0035 * pnt.radius;                                 //Mercury is .0035 the size of the Sun (Thanks Wolfram)
         var nextRadius = randRange(minRadius, maxRadius);                   //Radius is smaller than the parent by a certain ratio 
 
-        var minDistance = pnt.radius * 10 / nextRadius;                     //Distance to Mercury / radius of Sun
-        var maxDistance = pnt.radius * 100 / nextRadius;                    //Distance to Neptune / radius of Sun
+        //var minDistance = pnt.radius * 10 / nextRadius;                     //Distance to Mercury / radius of Sun
+        //var maxDistance = pnt.radius * 100 / nextRadius;                    //Distance to Neptune / radius of Sun
+        var minDistance = 83.25 * pnt.radius * DISTANCESCALE;                        //Mercury is 83.225 Sun Radius distances away from the sun
+        var maxDistance = 6462.9 * pnt.radius * DISTANCESCALE;                       //Neptune is 6462.9 Sun Radius distances away from the sun
         var nextDistance = randRange(minDistance, maxDistance);                      
 
         pnt.children.push(gen(1, nextRadius, nextDistance, pnt));           //Recurse
@@ -187,7 +198,8 @@ function randRange(a, b){
 
 //Use TexGen JS to generate a material to use with our planets
 function generateMaterial(color){    
-    var tgTexture = new TG.Texture(64, 64);                             //Size of the texture radically increases loading time
+    var TEXRES = 16;
+    var tgTexture = new TG.Texture(TEXRES, TEXRES);                      //Size of the texture radically increases loading time
     var vFractal = new TG.VoronoiFractal();                             //VoronoiFractal Looks nice, but maybe look into randomizing the strategy
     vFractal.tint(color.r, color.g, color.b);                           //Set the color base
     
@@ -199,6 +211,32 @@ function generateMaterial(color){
     texture.needsUpdate = true;
     var material = new THREE.MeshBasicMaterial({map: texture});         //Apply the texture to a material
     return material;
+}
+
+function revolve(body){
+    if (body.pivot == null){
+        return;
+    }
+    else{
+        var x = Math.cos(TAU * getDayCompletion() * body.yearLength * speedMultiplier) * body.distanceFromParent;
+        var z = Math.sin(TAU * getDayCompletion() * body.yearLength * speedMultiplier) * body.distanceFromParent;
+        body.pivot.position.set(x, 0, z);
+        for (var i = 0; i < body.children.length; i++){
+            revolve(body.children[i]);
+        }
+    }
+}
+
+function rotate(body){
+    if (body.mesh == null){
+        return;
+    }
+    else{
+        body.mesh.rotation.y = getDayCompletion() * TAU * speedMultiplier * body.rotationPeriod;
+        for (var i = 0; i < body.children.length; i++){
+            rotate(body.children[i]);
+        }
+    }
 }
 
 //Use a markov chain to generate names for the planets
@@ -214,17 +252,26 @@ function generateName(){
     return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();
 }
 
+//Get ratio of day completed (epoch in days, just the decimal portion)
+function getDayCompletion(){
+    return (Date.now() / 1000 / 60 / 60 / 24) % 1;
+}
+
 //What to do every frame
 function animate() {        
+    rotate(system);
+    revolve(system);
     requestAnimationFrame(animate);    //Get frame        
     renderer.render(scene, camera);    //Render
+    controls.target = controls.objectToFollow.getWorldPosition();
+    controls.update();
 }
 
 initThree();
 initEvents();
 starttime = Date.now();
-t = gen(3, 5, 0, null);
+system = gen(9, 5, 0, null);
 console.log("Solar System Generated in " + (Date.now() - starttime) / 1000 + " Seconds");
-scene.add(t.pivot);
-console.log(t)
+scene.add(system.pivot);
+console.log(system)
 animate();
