@@ -4,29 +4,24 @@
     Radius                  --> Determined by parent                                                        --> DONE
     RotationPeriod          --> Random within the real-world range                                          --> DONE
     DistanceFromParent      --> ? (Probably just do random in-range and delete smaller colliding planet)    --> 
-    YearLength              --> Random within the real-world range                                          --> DONE
-    Texture                 --> TextGen JS - https://github.com/mrdoob/texgen.js                            --> DONE (Mostly)
+    YearLength              --> Orbital Period Function                                                     --> DONE
+    Texture                 --> TextGen JS - https://github.com/mrdoob/texgen.js                            --> DONE (Essentially)
     Children                --> Recursion                                                                   --> DONE
 */
 
-//Global variables
-var scene, camera, renderer, controls, system;
-var objects = [];
-var raycaster = new THREE.Raycaster();
-var mouse = new THREE.Vector2();
-var speedMultiplier = 1440;
+var scene, camera, renderer, controls, system;                              //Global variables
+var objects = [];                                                           //Holds all selectable meshes
+var raycaster = new THREE.Raycaster();                                      //Takes snapshots of what the mouse is hovering over
+var mouse = new THREE.Vector2();                                            //Tracks mouse location
+var speedMultiplier = 1440;                                                 //Tracks how fast the universe goes
+var currentIndex = 0;                                                       //Tracks which object is currently selected
 
-//I don't want to type "2 * Math.PI" all the time
-const TAU = 2 * Math.PI;
-
-//Gravity (For revolution)
-const G = 9.8;
+const ORIGIN = new THREE.Vector3();
+const TAU = 2 * Math.PI;                                                    //I don't want to type "2 * Math.PI" all the time
+const G = 9.8;                                                              //Gravity (For revolution)
 
 function gen(childCount, radius, distanceFromParent, parent){
-    var SPHERE = new THREE.SphereGeometry(1, 256, 256);                     //Template of a sphere to be used in mesh creation
-    
-    //var MINYEAR = 88;                                                       //Mercury has an 88 day year
-    //var MAXYEAR = 59800;                                                    //Neptune has a 59800 day year
+    var SPHERE = new THREE.SphereGeometry(1, 256, 256);                     //Template of a sphere to be used in mesh creation    
 
     const SIZESCALE = 0.0001;                                               //Arbitrary values to make a sensical size
     const DISTANCESCALE = 0.001;                                            //Arbitrary values to make a sensical size
@@ -50,7 +45,7 @@ function gen(childCount, radius, distanceFromParent, parent){
 
     //Decide planet type based on parental status
     if (parent == null){
-        pnt.type = "Sun";
+        pnt.type = "Sun";                                                   //Define body type
         pnt.radius = 695500 * SIZESCALE;                                    //The sun gets a special radius: one proportionate to our sun
         pnt.distanceFromParent = 0;                                         //Suns don't have a parent
         pnt.yearLength = 0;                                                 //Suns don't revolve around anything
@@ -62,7 +57,7 @@ function gen(childCount, radius, distanceFromParent, parent){
         pnt.distanceFromParent += parent.radius;                            //Account for parent's radius
         pnt.pivot.translateX(pnt.distanceFromParent);                       //Move this pivot away from parent (account for parent and own radius)
         color = {r: Math.random(), g: Math.random(), b: Math.random()};     //Planets can be any color, really        
-        pnt.yearLength = 1 / (TAU * Math.sqrt(Math.pow(pnt.distanceFromParent, 3) / (9.8 * parent.radius)));    //Orbital Period Function
+        pnt.yearLength = 1 / (TAU * Math.sqrt(Math.pow(pnt.distanceFromParent, 3) / (G * parent.radius)));    //Orbital Period Function
     }
     else if(parent.type == "Planet"){
         pnt.type = "Moon";                                                  //Define body type
@@ -79,8 +74,7 @@ function gen(childCount, radius, distanceFromParent, parent){
     var material = generateMaterial(color);
     pnt.mesh = new THREE.Mesh(SPHERE, material);                            //Apply the material and sphere to a mesh                                                       
     pnt.mesh.name = pnt.name;                                               //Name the body
-    pnt.mesh.scale.set(pnt.radius, pnt.radius, pnt.radius);                 //Scale mesh
-    objects.push(pnt.mesh);                                                 //Put the mesh into the object collection for interaction
+    pnt.mesh.scale.set(pnt.radius, pnt.radius, pnt.radius);                 //Scale mesh    
     pnt.pivot.add(pnt.mesh);                                                //Add mesh to pivot    
     pnt.pivot.name = pnt.name + " System";                                  //Name the system    
 
@@ -90,29 +84,62 @@ function gen(childCount, radius, distanceFromParent, parent){
     var ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
     var ring = new THREE.Mesh(ringGeometry, ringMaterial);        
     ring.scale.set(pnt.distanceFromParent, pnt.distanceFromParent, pnt.distanceFromParent);
-    ring.position.set(pnt.mesh.getWorldPosition().x, pnt.mesh.getWorldPosition().y, pnt.mesh.getWorldPosition().z)
+    ring.position.set(pnt.mesh.getWorldPosition(ORIGIN).x, pnt.mesh.getWorldPosition(ORIGIN).y, pnt.mesh.getWorldPosition(ORIGIN).z)
     
     if (parent != null){
         parent.pivot.add(ring);
     }
     
-
     //Now recurse with the children
     for (var i = 0; i < childCount; i++){
         var maxRadius = .1 * pnt.radius;                                    //Jupiter is roughly .1 the size of the sun (Thanks Wolfram)
         var minRadius = .0035 * pnt.radius;                                 //Mercury is .0035 the size of the Sun (Thanks Wolfram)
         var nextRadius = randRange(minRadius, maxRadius);                   //Radius is smaller than the parent by a certain ratio 
-
-        //var minDistance = pnt.radius * 10 / nextRadius;                     //Distance to Mercury / radius of Sun
-        //var maxDistance = pnt.radius * 100 / nextRadius;                    //Distance to Neptune / radius of Sun
-        var minDistance = 83.25 * pnt.radius * DISTANCESCALE;                        //Mercury is 83.225 Sun Radius distances away from the sun
-        var maxDistance = 6462.9 * pnt.radius * DISTANCESCALE;                       //Neptune is 6462.9 Sun Radius distances away from the sun
+        var minDistance = 83.25 * pnt.radius * DISTANCESCALE;               //Mercury is 83.225 Sun Radius distances away from the sun
+        var maxDistance = 6462.9 * pnt.radius * DISTANCESCALE;              //Neptune is 6462.9 Sun Radius distances away from the sun
         var nextDistance = randRange(minDistance, maxDistance);                      
-
         pnt.children.push(gen(1, nextRadius, nextDistance, pnt));           //Recurse
     }	
 
 	return pnt;
+}
+
+//Compare function that orders bodies by distance from parent
+function compareBodies(a, b){
+    if (a.distanceFromParent < b.distanceFromParent){
+        return -1;
+    }
+    else if (a.distanceFromParent > b.distanceFromParent){
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
+//Fills the "objects" variable with planets
+function populateObjects(system){
+    objects.push(system.mesh);    
+    for (var i = 0; i < system.children.length; i++){
+        populateObjects(system.children[i]);
+    }
+}
+
+//Sorts by distance from parent
+function sortSystem(system){
+    system.children.sort(compareBodies);
+    for (var i = 0; i < system.children.length; i++){
+        system.children[i].children.sort(compareBodies);
+    }
+    return system;        
+}
+
+//Simplifies generation usability
+function makeSystem(planetCount){
+    var system = gen(planetCount, 1, 0, null);
+    system = sortSystem(system);        
+    populateObjects(system);
+    return system;
 }
 
 //Initializes base THREE JS stuff that basically won't be touched
@@ -128,6 +155,58 @@ function initThree(){
     document.body.appendChild(renderer.domElement);
     controls = new THREE.OrbitControls(camera); 
     controls.objectToFollow = new THREE.Object3D();
+}
+
+//Handles speed modification and toast message
+function modifySpeed(multiplier){
+    speedMultiplier = multiplier;
+    speedMessage = "";
+    switch (speedMultiplier){
+        case 1440: 
+            speedMessage = "Speed: 1 day per minute";
+            break;
+        case 1440 * 60:
+            speedMessage = "Speed: 1 day per second";
+            break;
+        case 1440 * 60 * 365: 
+            speedMessage = "Speed: 1 year per second";
+            break;
+    }
+    if (speedMessage != ""){
+        //Show materialize message
+        M.Toast.dismissAll();
+        M.toast({html: speedMessage});    
+    }
+}
+
+//Searches the system tree passed for the mesh provided
+function findDetails(mesh, sys){
+    if (sys.mesh == mesh){
+        return sys;
+    }
+    else{
+        var result = null;
+        for (var i = 0; result == null && i < sys.children.length; i++){
+            result = findDetails(mesh, sys.children[i]);
+        }
+        return result;
+    }
+}
+
+//Handles planet selection and toast message
+function selectPlanet(mesh){
+    if (mesh != null){
+        var details = findDetails(mesh, system);        
+        htmlString = "Name: " + details.name + "<br>" + "Type: " + details.type + "<br>" + "Satellites: " + details.children.length + "<br>" + "Rotation Duration (Days): " + (1 / details.rotationPeriod).toFixed(2) + "<br>" + "Revolution Duration (Days): " + (1 / details.yearLength).toFixed(2);
+        //Run the object's function            
+        M.Toast.dismissAll();           
+        M.toast({displayLength: 10000, outDuration: 0, html: htmlString});    
+        
+        //Change controls to center on that object
+        controls.objectToFollow = mesh;
+        controls.target = controls.objectToFollow.getWorldPosition(ORIGIN);            
+        controls.update();
+    }
 }
 
 //Initializes JS/Browser events
@@ -150,7 +229,7 @@ function initEvents(){
         mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
         mouse.y = - (event.clientY / renderer.domElement.clientHeight) * 2 + 1;
         
-        //Take a snaphot of what's going on
+        //Take a snaphot of what's going on        
         raycaster.setFromCamera(mouse, camera);
 
         //Grab the objects that were intersected
@@ -158,36 +237,44 @@ function initEvents(){
 
         //If an object was intersected by the mouse
         if (intersects.length > 0) {
-            //Run the object's function            
-            M.Toast.dismissAll();
-            M.toast({html: intersects[0].object.name});    
-            
-            //Change controls to center on that object
-            controls.objectToFollow = intersects[0].object;
-            controls.target = controls.objectToFollow.getWorldPosition();            
-            controls.update();
+            //Run the object's function   
+            for (var i = 0; i < objects.length; i++){
+                if (objects[i] == intersects[0].object){
+                    currentIndex = i;
+                }
+            }         
+            selectPlanet(objects[currentIndex]);
         }
     }
 
     //Handle KeyPress events
-    window.onkeypress = function(event) {
-        var speedMessage = "";
+    window.onkeypress = function(event) {        
+        var newSpeed = 0;            
         switch(event.keyCode){            
-            case 49: speedMultiplier = 1440;                    //1 Full Earth rotation every 1 minute --> (1440 = number of minutes in a day, 24 * 60)
-            speedMessage = "Speed: 1 day per minute";
-            break;                        
-            case 50: speedMultiplier = 1440 * 60;               //1 Full Earth rotation every 1 second --> (1440 * 60 = minutes to seconds in a year)
-            speedMessage = "Speed: 1 day per second";
-            break;                        
-            case 51: speedMultiplier = 1440 * 60 * 365;         //1 Full Earth revolution every 1 second --> = (1440 * 60 * 365 = 1 full earth revolution every 1/365 second, or 1 year per second)
-            speedMessage = "Speed: 1 year per second";
-            break;
-        }
-        if (speedMessage != ""){
-            //Show materialize message
-            M.Toast.dismissAll();
-            M.toast({html: speedMessage});    
-        }
+            case 49:    //1
+            modifySpeed(1440);                        //1 Full Earth rotation every 1 minute --> (1440 = number of minutes in a day, 24 * 60)
+                break;                        
+            case 50:    //2
+            modifySpeed(1440 * 60);                   //1 Full Earth rotation every 1 second --> (1440 * 60 = minutes to seconds in a year)
+                break;                        
+            case 51:    //3
+                modifySpeed(1440 * 60 * 365);         //1 Full Earth revolution every 1 second --> = (1440 * 60 * 365 = 1 full earth revolution every 1/365 second, or 1 year per second)
+                break;
+            case 97:    //a
+                //Go "left" (closer to the sun)
+                if (currentIndex > 0){
+                    currentIndex--;
+                    selectPlanet(objects[currentIndex]);
+                }
+                break;
+            case 100:   //b
+                //Go "right" (further from the sun)
+                if (currentIndex < objects.length - 1){
+                    currentIndex++;
+                    selectPlanet(objects[currentIndex]);
+                }
+                break;
+        }                
     }
 }
 
@@ -213,6 +300,7 @@ function generateMaterial(color){
     return material;
 }
 
+//Revolve a given body around its parent
 function revolve(body){
     if (body.pivot == null){
         return;
@@ -227,6 +315,7 @@ function revolve(body){
     }
 }
 
+//Rotate a body on its own y axis
 function rotate(body){
     if (body.mesh == null){
         return;
@@ -263,15 +352,20 @@ function animate() {
     revolve(system);
     requestAnimationFrame(animate);    //Get frame        
     renderer.render(scene, camera);    //Render
-    controls.target = controls.objectToFollow.getWorldPosition();
+    controls.target = controls.objectToFollow.getWorldPosition(ORIGIN);
     controls.update();
 }
 
-initThree();
-initEvents();
-starttime = Date.now();
-system = gen(9, 5, 0, null);
-console.log("Solar System Generated in " + (Date.now() - starttime) / 1000 + " Seconds");
-scene.add(system.pivot);
-console.log(system)
+//Do all initialization events
+function init(){
+    initThree();
+    initEvents();
+    starttime = Date.now();
+    system = makeSystem(5);
+    controls.objectToFollow = system.mesh;
+    console.log("Solar System Generated in " + (Date.now() - starttime) / 1000 + " Seconds");
+    scene.add(system.pivot);
+}
+
+init();
 animate();

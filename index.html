@@ -30,16 +30,31 @@
     <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
     <!-- Compiled and minified JavaScript -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>    
+    <!--Materialize Icons-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+ 
 
 </head>
 <body>
 </body>
-    <div id="welcome-modal" class="modal grey darken-3">
+    <div id="welcome-modal" class="modal">
         <div class="modal-content">
-            <h4 class="center-align">Welcome to The Solar System!</h4>            
+            <h4 class="center-align">Welcome to The Solar System!</h4>                
+            <ul class="collection with-header grey">
+                <li class="collection-header"><h5>Navigation</h5></li>
+                <li class="collection-item"><i class="tiny material-icons">mouse</i> - Rotate around and select objects</li>
+                <li class="collection-item"><b>a</b> - Move closer to the Sun</li>
+                <li class="collection-item"><b>d</b> - Move further away from the Sun</li>
+            </ul>
+            <ul class="collection with-header grey">
+                <li class="collection-header"><h5>Speed Modifiers</h5></li>
+                <li class="collection-item"><b>1</b> - 1 day per minute</li>
+                <li class="collection-item"><b>2</b> - 1 day per second</li>
+                <li class="collection-item"><b>3</b> - 1 year per second</li>
+            </ul>            
         </div>
-        <div class="modal-footer grey darken-3">
+        <div class="modal-footer">
             <button class="modal-close waves-effect waves-green btn-flat">Close</button>
         </div>
     </div>
