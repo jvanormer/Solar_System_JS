@@ -285,7 +285,7 @@ function randRange(a, b){
 
 //Use TexGen JS to generate a material to use with our planets
 function generateMaterial(color){    
-    var TEXRES = 16;
+    var TEXRES = 512;
     var tgTexture = new TG.Texture(TEXRES, TEXRES);                      //Size of the texture radically increases loading time
     var vFractal = new TG.VoronoiFractal();                             //VoronoiFractal Looks nice, but maybe look into randomizing the strategy
     vFractal.tint(color.r, color.g, color.b);                           //Set the color base
@@ -361,11 +361,14 @@ function init(){
     initThree();
     initEvents();
     starttime = Date.now();
-    system = makeSystem(5);
-    controls.objectToFollow = system.mesh;
-    console.log("Solar System Generated in " + (Date.now() - starttime) / 1000 + " Seconds");
-    scene.add(system.pivot);
+    system = makeSystem(5);                                                                         //Make a system (plugged with 5 children)
+    controls.objectToFollow = system.mesh;                                                          //Link the camera to the Sun
+    console.log("Solar System Generated in " + (Date.now() - starttime) / 1000 + " Seconds");       //Report load time
+    scene.add(system.pivot);                                                                        //Add the system to the scene for rendering
+    camera.position.z = system.children[system.children.length - 1].distanceFromParent;             //Put the camera in a sensible place
 }
 
 init();
 animate();
+collisions = raycaster.intersectObjects(scene.children, true);
+console.log(collisions);
