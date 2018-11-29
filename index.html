@@ -8,7 +8,9 @@
             background-size: auto;
             height: 100%;
             overflow: hidden;  
-        }
+            background-color: black;
+        }        
+
     </style>
     <title>Solar System</title>
     <!--Jquery-->
@@ -40,24 +42,77 @@
 </body>
     <div id="welcome-modal" class="modal">
         <div class="modal-content">
-            <h4 class="center-align">Welcome to The Solar System!</h4>                
-            <ul class="collection with-header grey">
-                <li class="collection-header"><h5>Navigation</h5></li>
-                <li class="collection-item"><i class="tiny material-icons">mouse</i> - Rotate around and select objects</li>
-                <li class="collection-item"><b>a</b> - Move closer to the Sun</li>
-                <li class="collection-item"><b>d</b> - Move further away from the Sun</li>
-            </ul>
-            <ul class="collection with-header grey">
-                <li class="collection-header"><h5>Speed Modifiers</h5></li>
-                <li class="collection-item"><b>1</b> - 1 day per minute</li>
-                <li class="collection-item"><b>2</b> - 1 day per second</li>
-                <li class="collection-item"><b>3</b> - 1 year per second</li>
-            </ul>            
-        </div>
-        <div class="modal-footer">
-            <button class="modal-close waves-effect waves-green btn-flat">Close</button>
+            <h5 class="center-align">Welcome to The Solar System!</h5>                
+            <div class="row">
+                <div class="col s6">
+                    <ul class="collection with-header grey">
+                        <li class="collection-header"><h6>Navigation</h6></li>
+                        <li class="collection-item"><i class="tiny material-icons">mouse</i> - Rotate around and select objects</li>
+                        <li class="collection-item"><b>a</b> - Move closer to the sun</li>
+                        <li class="collection-item"><b>d</b> - Move further away from the sun</li>
+                    </ul>
+                </div>
+                <div class="col s6">
+                    <ul class="collection with-header grey">
+                        <li class="collection-header"><h6>Speed Modifiers</h6></li>
+                        <li class="collection-item"><b>1</b> - 1 day per minute</li>
+                        <li class="collection-item"><b>2</b> - 1 day per second</li>
+                        <li class="collection-item"><b>3</b> - 1 year per second</li>
+                    </ul>            
+                </div>
+            </div>
+            <div class="row">
+                <div class="card">
+                    <div class="card-content">
+                        <form id="args">                        
+                            <div class="row">
+                                <p class="range-field">
+                                    <label for="planetInput">Number of Planets: <span id="planetCountDisplay">9</span></label>
+                                    <input type="range" name="planetInput" id="planetInput" min="1" max="10" value="9" onchange="$('#planetCountDisplay').text(this.value)">
+                                </p>             
+                            </div>           
+                            <div class="row">
+                                <div class="col s6">
+                                    <label>                            
+                                        <input type="checkbox" id="lowRes" />
+                                        <span>Low-Resolution Mode</span>
+                                    </label>
+                                </div>
+                                <div class="col s6 right-align">
+                                    <button id="startButton" class="btn white black-text waves-effect waves-light">Start!</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="center-align">
+                                    <h6 id="loadingText"></h6>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>   
+            </div>
         </div>
     </div>
     <!--<script src="simple.js"></script>-->
     <script src="generateSystem.js"></script>
+    <script>
+        $(function(){                 
+            //Initialize Materialize modal 
+            $('.modal').modal({ dismissible: false });                  
+            $('#welcome-modal').modal("open");    
+              
+            $("#args").submit(function(){               
+                $("#loadingText").text("Loading..."); 
+                $("#startButton").prop("disabled", true);
+                setTimeout(genPlanets, 100);            
+                return false;
+            })
+        })   
+
+        function genPlanets(){
+            var planetCount = $("#planetInput").val();
+            var lowRes = $("#lowRes").prop("checked");
+            go(planetCount, lowRes);
+        }        
+    </script>
 </html>
