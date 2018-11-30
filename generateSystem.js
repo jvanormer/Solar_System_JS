@@ -26,14 +26,16 @@ const G = 9.8;                                                              //Gr
 const SIZESCALE = 0.0001;                                                   //Arbitrary values to make a sensical size
 const DISTANCESCALE = 0.001;                                                //Arbitrary values to make a sensical size
 
+const SPHERE = new THREE.SphereGeometry(1, 256, 256);                       //Template of a sphere to be used in mesh creation    
+const MINDAY = 0.41250000000000003;                                         //Jupiter has a .4125 day long day
+const MAXDAY = 243.02083333333334;                                          //Venus has a 243 day long day
+
+var RINGGEOMETRY = new THREE.RingGeometry(1, 1.001, 100, 100);
+RINGGEOMETRY.rotateX(Math.PI / 2);                                          //Put ring on the same plane as planets
+var RINGMATERIAL = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+    
 function gen(childCount, radius, distanceFromParent, parent){
-    var SPHERE = new THREE.SphereGeometry(1, 256, 256);                     //Template of a sphere to be used in mesh creation    
-
-    var MINDAY = 0.41250000000000003;                                       //Jupiter has a .4125 day long day
-    var MAXDAY = 243.02083333333334;                                        //Venus has a 243 day long day
-
     var color = {r: 0, g: 0, b: 0};                                         //Colors for the texture    
-   
     var distanceMod = 1;
 
     var pnt = {
@@ -87,10 +89,7 @@ function gen(childCount, radius, distanceFromParent, parent){
     pnt.pivot.name = pnt.name + " System";                                  //Name the system    
 
     //Add planetary ring
-    var ringGeometry = new THREE.RingGeometry(1, 1.001, 100, 100);
-    ringGeometry.rotateX(Math.PI / 2);                                      //Put ring on the same plane as planets
-    var ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-    var ring = new THREE.Mesh(ringGeometry, ringMaterial);        
+    var ring = new THREE.Mesh(RINGGEOMETRY, RINGMATERIAL);        
     ring.scale.set(pnt.distanceFromParent, pnt.distanceFromParent, pnt.distanceFromParent);
     ring.position.set(pnt.mesh.getWorldPosition(ORIGIN).x, pnt.mesh.getWorldPosition(ORIGIN).y, pnt.mesh.getWorldPosition(ORIGIN).z)
     
@@ -107,7 +106,7 @@ function gen(childCount, radius, distanceFromParent, parent){
         var minDistance = 83.25 * pnt.radius * DISTANCESCALE;               //Mercury is 83.225 Sun Radius distances away from the sun
         var maxDistance = 6462.9 * pnt.radius * DISTANCESCALE;              //Neptune is 6462.9 Sun Radius distances away from the sun
         var nextDistance = Math.pow(randRange(minDistance, maxDistance), distanceMod);                      
-        var nextChild = gen(Math.floor(Math.sqrt(childCount)), nextRadius, nextDistance, pnt);           //Recurse
+        var nextChild = gen(Math.floor(randRange(0, Math.sqrt(childCount) + 1)), nextRadius, nextDistance, pnt);           //Recurse
 
         //Determine maximum width a planet system takes up
         if (pnt.maxWidth < pnt.radius + nextChild.distanceFromParent + nextChild.radius){
@@ -126,8 +125,14 @@ function gen(childCount, radius, distanceFromParent, parent){
             if (distanceBetween <= pnt.children[j].maxWidth + nextChild.maxWidth){
                 console.log(nextChild.name + " Rejected!");
                 reject = true;
-                nextChild.parent.pivot.remove(nextChild.ring);
+                nextChild.parent.pivot.remove(nextChild.ring);              //Make sure objects aren't left behind
                 nextChild.parent.pivot.remove(nextChild.pivot);
+                nextChild.ring.material.dispose();
+                nextChild.ring.geometry.dispose();
+                nextChild.mesh.material.dispose();
+                nextChild.mesh.geometry.dispose();
+                nextChild.mesh = undefined;
+                nextChild = undefined;
                 pnt.maxWidth = pnt.radius;                
                 i--;
             }
@@ -136,10 +141,7 @@ function gen(childCount, radius, distanceFromParent, parent){
             console.log(nextChild.name + " Accepted!");
             pnt.children.push(nextChild);
         }
-
-        //pnt.children.push(nextChild);
     }	
-
 	return pnt;
 }
 
