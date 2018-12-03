@@ -113,13 +113,14 @@ function gen(childCount, radius, distanceFromParent, parent){
             pnt.maxWidth = pnt.radius + nextChild.distanceFromParent + nextChild.radius;
         }
 
+        //Rejection Sampling
+        var reject = false;
+
         //Ensures moons can't be eaten by the sun
         if (nextChild.distanceFromParent <= nextChild.maxWidth){
             reject = true;
         }
 
-        //Rejection Sampling
-        var reject = false;
         for (var j = 0; !reject && j < pnt.children.length; j++){
             var distanceBetween = Math.abs(nextChild.distanceFromParent - pnt.children[j].distanceFromParent);
             if (distanceBetween <= pnt.children[j].maxWidth + nextChild.maxWidth){
