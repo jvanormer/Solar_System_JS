@@ -9,6 +9,8 @@
     Children                --> Recursion                                                                   --> DONE
 */
 
+
+
 var scene, camera, renderer, controls, system;                              //Global variables
 var objects = [];                                                           //Holds all selectable meshes
 var raycaster = new THREE.Raycaster();                                      //Takes snapshots of what the mouse is hovering over
@@ -16,7 +18,6 @@ var mouse = new THREE.Vector2();                                            //Tr
 var speedMultiplier = 1440;                                                 //Tracks how fast the universe goes
 var currentIndex = 0;                                                       //Tracks which object is currently selected
 var loadTime;
-var lowResInput = false;
 var planetCountInput = 9;
 
 const ORIGIN = new THREE.Vector3();
@@ -33,7 +34,11 @@ const MAXDAY = 243.02083333333334;                                          //Ve
 var RINGGEOMETRY = new THREE.RingGeometry(1, 1.001, 100, 100);
 RINGGEOMETRY.rotateX(Math.PI / 2);                                          //Put ring on the same plane as planets
 var RINGMATERIAL = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-    
+
+var texres = 4;
+var tgTexture = new TG.Texture(texres, texres);
+
+
 function gen(childCount, radius, distanceFromParent, parent){
     var color = {r: 0, g: 0, b: 0};                                         //Colors for the texture    
     var distanceMod = 1;
@@ -89,7 +94,7 @@ function gen(childCount, radius, distanceFromParent, parent){
     pnt.pivot.name = pnt.name + " System";                                  //Name the system    
 
     //Add planetary ring
-    var ring = new THREE.Mesh(RINGGEOMETRY, RINGMATERIAL);        
+    var ring = new THREE.Mesh(RINGGEOMETRY, RINGMATERIAL);
     ring.scale.set(pnt.distanceFromParent, pnt.distanceFromParent, pnt.distanceFromParent);
     ring.position.set(pnt.mesh.getWorldPosition(ORIGIN).x, pnt.mesh.getWorldPosition(ORIGIN).y, pnt.mesh.getWorldPosition(ORIGIN).z)
     
@@ -291,24 +296,22 @@ function initEvents(){
         var newSpeed = 0;            
         switch(event.keyCode){            
             case 49:    //1
-            modifySpeed(1440);                        //1 Full Earth rotation every 1 minute --> (1440 = number of minutes in a day, 24 * 60)
+            modifySpeed(1440);                          //1 Full Earth rotation every 1 minute --> (1440 = number of minutes in a day, 24 * 60)
                 break;                        
             case 50:    //2
-            modifySpeed(1440 * 60);                   //1 Full Earth rotation every 1 second --> (1440 * 60 = minutes to seconds in a year)
+            modifySpeed(1440 * 60);                     //1 Full Earth rotation every 1 second --> (1440 * 60 = minutes to seconds in a year)
                 break;                        
             case 51:    //3
-                modifySpeed(1440 * 60 * 365);         //1 Full Earth revolution every 1 second --> = (1440 * 60 * 365 = 1 full earth revolution every 1/365 second, or 1 year per second)
+                modifySpeed(1440 * 60 * 365);           //1 Full Earth revolution every 1 second --> = (1440 * 60 * 365 = 1 full earth revolution every 1/365 second, or 1 year per second)
                 break;
             case 97:    //a
-                //Go "left" (closer to the sun)
-                if (currentIndex > 0){
+                if (currentIndex > 0){                  //Go "left" (closer to the sun)
                     currentIndex--;
                     selectPlanet(objects[currentIndex]);
                 }
                 break;
             case 100:   //b
-                //Go "right" (further from the sun)
-                if (currentIndex < objects.length - 1){
+                if (currentIndex < objects.length - 1){ //Go "right" (further from the sun)
                     currentIndex++;
                     selectPlanet(objects[currentIndex]);
                 }
@@ -324,19 +327,12 @@ function randRange(a, b){
 
 //Use TexGen JS to generate a material to use with our planets
 function generateMaterial(color){    
-    var TEXRES = (lowResInput ? 4 : 512);
-    var tgTexture = new TG.Texture(TEXRES, TEXRES);                     //Size of the texture radically increases loading time
-    //var vFractal = new TG.VoronoiFractal();                           //VoronoiFractal Looks nice, but maybe look into randomizing the strategy
-    var vFractal = new TG.VoronoiNoise();                               //VoronoiNoise loads faster
-    vFractal.tint(color.r, color.g, color.b);                           //Set the color base
-    
-    //Add things here...
-    //Look into weight, density, and octaves changing
-
-    tgTexture.set(vFractal);                                            //Apply the fractal style to the texture    
+    var vNoise = new TG.VoronoiNoise();                               //VoronoiNoise loads faster
+    vNoise.tint(color.r, color.g, color.b);                           //Set the color base
+    tgTexture.set(vNoise);                                            //Apply the fractal style to the template texture    
     var texture = new THREE.Texture(tgTexture.toCanvas());
     texture.needsUpdate = true;
-    var material = new THREE.MeshBasicMaterial({map: texture});         //Apply the texture to a material
+    var material = new THREE.MeshBasicMaterial({map: texture});       //Apply the texture to a material
     return material;
 }
 
@@ -370,15 +366,11 @@ function rotate(body){
 
 //Use a markov chain to generate names for the planets
 function generateName(){
-    //Using Foswig JS
-    var chain = new Foswig(3);
-    //Dictionary is top 100 popular names
+    var chain = new Foswig(3);                                              //Using Foswig JS
     var dictionary = ["MARY", "JAMES", "PATRICIA", "JOHN", "ELIZABETH", "ROBERT", "JENNIFER", "MICHAEL", "LINDA", "WILLIAM", "BARBARA", "DAVID", "MARGARET", "RICHARD", "SUSAN", "JOSEPH", "DOROTHY", "CHARLES", "SARAH", "THOMAS", "JESSICA", "CHRISTOPHER", "HELEN", "DANIEL", "NANCY", "MATTHEW", "BETTY", "GEORGE", "KAREN", "DONALD", "LISA", "PAUL", "SANDRA", "ANTHONY", "ANNA", "MARK", "DONNA", "EDWARD", "RUTH", "STEVEN", "CAROL", "KENNETH", "KIMBERLY", "ANDREW", "ASHLEY", "BRIAN", "MICHELLE", "KEVIN", "LAURA", "JOSHUA", "AMANDA", "RONALD", "MELISSA", "TIMOTHY", "EMILY", "JASON", "DEBORAH", "JEFFREY", "REBECCA", "FRANK", "STEPHANIE", "GARY", "SHARON", "ERIC", "KATHLEEN", "RYAN", "CYNTHIA", "STEPHEN", "SHIRLEY", "NICHOLAS", "AMY", "LARRY", "ANGELA", "JACOB", "CATHERINE", "SCOTT", "VIRGINIA", "JONATHAN", "KATHERINE", "RAYMOND", "BRENDA", "JUSTIN", "PAMELA", "BRANDON", "FRANCES", "GREGORY", "CHRISTINE", "SAMUEL", "NICOLE", "PATRICK", "JANET", "BENJAMIN", "CAROLYN", "JACK", "DEBRA", "WALTER", "MARTHA", "DENNIS", "RACHEL", "HENRY", "ALICE", "JERRY", "MARIE", "PETER", "HEATHER", "DOUGLAS", "SAMANTHA", "HAROLD", "MARIA", "ALEXANDER", "DIANE", "TYLER", "JOYCE", "ARTHUR", "JULIE", "AARON", "EVELYN", "JOSE", "EMMA", "ADAM", "JOAN", "CARL", "ROSE", "ZACHARY", "CHRISTINA", "ALBERT", "ANN", "NATHAN", "KELLY", "KYLE", "DORIS", "LAWRENCE", "JEAN", "JOE", "MILDRED", "WILLIE", "JUDITH", "GERALD", "KATHRYN", "ROGER", "LAUREN", "KEITH", "CHERYL", "TERRY", "GRACE", "HARRY", "VICTORIA", "JEREMY", "MEGAN", "RALPH", "JULIA", "ROY", "JACQUELINE", "SEAN", "TERESA", "JESSE", "ANDREA", "LOUIS", "GLORIA", "BILLY", "SARA", "BRUCE", "JANICE", "EUGENE", "THERESA", "AUSTIN", "LILLIAN", "BRYAN", "JUDY", "WAYNE", "BEVERLY", "RUSSELL", "HANNAH", "HOWARD", "DENISE", "CHRISTIAN", "MARILYN", "FRED", "JANE", "PHILIP", "AMBER", "ALAN", "DANIELLE", "RANDY", "BRITTANY", "JORDAN", "IRENE", "JUAN", "DIANA", "BOBBY", "ANNIE", "VINCENT", "LORI", "JOHNNY", "FLORENCE", "CLARENCE", "KATHY", "PHILLIP", "TAMMY", "ERNEST"];
-    chain.addWordsToChain(dictionary);
-    //Words of length 5 to 10
-    result = chain.generateWord(5, 10, false);
-    //Return it as a proper noun
-    return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();
+    chain.addWordsToChain(dictionary);                                      //Dictionary is top 100 popular names
+    result = chain.generateWord(5, 10, false);                              //Words of length 5 to 10
+    return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();  //Return it as a proper noun
 }
 
 //Get ratio of day completed (epoch in days, just the decimal portion)
@@ -401,17 +393,18 @@ function init(){
     initThree();
     initEvents();
     starttime = Date.now();
-    system = makeSystem(planetCountInput);                                                                         //Make a system (plugged with 5 children)
-    controls.objectToFollow = system.mesh;                                                          //Link the camera to the Sun
+    system = makeSystem(planetCountInput);                                                       //Make a system (plugged with 5 children)
+    controls.objectToFollow = system.mesh;                                                       //Link the camera to the Sun
     loadTime = (Date.now() - starttime) / 1000
     console.log(system.name + " System Generated in " + loadTime.toFixed(2) + " Seconds");       //Report load time
-    scene.add(system.pivot);                                                                        //Add the system to the scene for rendering
-    //camera.position.z = system.children[system.children.length - 1].distanceFromParent;             //Put the camera in a sensible place
+    scene.add(system.pivot);                                                                     //Add the system to the scene for rendering
 }
 
+//Allows the generation to be callable
 function go(planetCount, lowRes){        
     planetCountInput = planetCount;
-    lowResInput = lowRes;
+    texres = (lowRes ? 4 : 512);
+    tgTexture = new TG.Texture(texres, texres);
     init();
     animate();
     M.toast({html: system.name + " System Generated in " + loadTime.toFixed(2) + " Seconds"});
